@@ -1,0 +1,30 @@
+{
+  "providers": {
+    "aliyun": {
+      "ANTHROPIC_BASE_URL": "xxx",
+      "ANTHROPIC_AUTH_TOKEN": "xxx",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "xxx",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "xxx",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "xxx",
+      "CLAUDE_CODE_EXTRA_BODY": {
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 40,
+        "max_tokens": 4096
+      }
+    },
+    "custom": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:8000",
+      "ANTHROPIC_AUTH_TOKEN": "dummy",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "local-model",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "local-model",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "local-model",
+      "CLAUDE_CODE_EXTRA_BODY": {
+        "temperature": 1.0,
+        "top_p": 1.0,
+        "max_tokens": 8192
+      }
+    }
+  },
+  "default_provider": "custom"
+}
