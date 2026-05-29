@@ -6,15 +6,20 @@
 
 | 文件 | 说明 |
 |------|------|
-| `run-ccb.ps1` | PowerShell 启动脚本，在新窗口中启动 Claude Code |
+| `run-ccb.ps1` | PowerShell 启动脚本，在新窗口中启动 Claude Code（依赖 Bun 运行时） |
+| `run-ccb-exe.ps1` | PowerShell 启动脚本，使用预编译的 `ccb.exe` 启动（无需 Bun） |
 
-## 快速开始
+## 启动方式
 
-### 1. 准备 settings 配置文件
+### 方式一：使用 Bun 运行（run-ccb.ps1）
+
+需要安装 Bun 运行时并设置 `CCB_HOME` 环境变量。
+
+#### 1. 准备 settings 配置文件
 
 参考 [settings 模板](#settings-配置格式)，创建一个 settings 文件。
 
-### 2. 设置环境变量
+#### 2. 设置环境变量
 
 脚本依赖 `CCB_HOME` 环境变量定位 Claude Code 安装路径：
 
@@ -26,7 +31,7 @@ $env:CCB_HOME = "C:\path\to\claude-code"
 [Environment]::SetEnvironmentVariable("CCB_HOME", "C:\path\to\claude-code", "User")
 ```
 
-### 3. 运行脚本
+#### 3. 运行脚本
 
 ```powershell
 # 使用指定配置名启动（自动寻找脚本同级目录下的 ccb-settings/{配置名}/settings.json）
@@ -34,6 +39,33 @@ $env:CCB_HOME = "C:\path\to\claude-code"
 
 # 传递额外参数
 .\run-ccb.ps1 -ConfigName custom --debug
+```
+
+### 方式二：使用 exe 文件（run-ccb-exe.ps1）
+
+无需 Bun 运行时，适合已构建发布后的快速部署。
+
+#### 1. 准备 exe 文件
+
+将构建后的 `ccb.exe` 放在脚本同级目录：
+
+```
+scripts/windows/
+├── ccb.exe              ← 必须存在
+├── run-ccb-exe.ps1
+└── ccb-settings/
+    └── custom/
+        └── settings.json
+```
+
+#### 2. 运行脚本
+
+```powershell
+# 使用指定配置名启动
+.\run-ccb-exe.ps1 -ConfigName custom
+
+# 传递额外参数
+.\run-ccb-exe.ps1 -ConfigName custom --debug
 ```
 
 ## 参数说明
@@ -45,8 +77,15 @@ $env:CCB_HOME = "C:\path\to\claude-code"
 
 ## 前置依赖
 
+### run-ccb.ps1（Bun 模式）
+
 - **Bun** — JavaScript 运行时，[安装指南](https://bun.sh/)
 - **CCB_HOME** — 环境变量，指向 Claude Code 项目根目录
+- **settings 配置文件** — 用户自行维护，格式见下方
+
+### run-ccb-exe.ps1（exe 模式）
+
+- **ccb.exe** — 预编译的可执行文件，需放在脚本同级目录
 - **settings 配置文件** — 用户自行维护，格式见下方
 
 ## 注意事项
