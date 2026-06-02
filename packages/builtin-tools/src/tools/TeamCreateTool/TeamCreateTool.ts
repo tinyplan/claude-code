@@ -45,6 +45,21 @@ const inputSchema = lazySchema(() =>
         'Type/role of the team lead (e.g., "researcher", "test-runner"). ' +
           'Used for team file and inter-agent coordination.',
       ),
+    lead_model: z
+      .enum(['opus', 'sonnet', 'haiku', 'inherit'])
+      .optional()
+      .describe(
+        'Model for the team lead. "inherit" uses the current session model. ' +
+          'If omitted, defaults to the current session model.',
+      ),
+    teammate_default_model: z
+      .enum(['opus', 'sonnet', 'haiku', 'inherit'])
+      .optional()
+      .describe(
+        'Default model for teammates spawned in this team. ' +
+          '"inherit" uses the team lead\'s model. ' +
+          'If omitted, uses the global teammate default model configuration.',
+      ),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -69,6 +84,42 @@ function generateUniqueTeamName(providedName: string): string {
 
   // Team exists, generate a new unique name
   return generateWordSlug()
+}
+
+type ModelAlias = 'opus' | 'sonnet' | 'haiku' | 'inherit'
+
+/**
+ * Resolves the team lead's model configuration.
+ * - 'inherit' or undefined: uses the current session model
+ * - otherwise: uses the specified model alias
+ */
+function resolveLeadModel(
+  leadModelInput: ModelAlias | undefined,
+  currentSessionModel: string,
+): string {
+  if (!leadModelInput || leadModelInput === 'inherit') {
+    return parseUserSpecifiedModel(currentSessionModel)
+  }
+  return parseUserSpecifiedModel(leadModelInput)
+}
+
+/**
+ * Resolves the teammate default model configuration.
+ * - undefined: returns undefined (use global config)
+ * - 'inherit': returns the lead model
+ * - otherwise: returns the specified model
+ */
+function resolveTeammateDefaultModel(
+  teammateDefaultModelInput: ModelAlias | undefined,
+  leadModel: string,
+): string | undefined {
+  if (!teammateDefaultModelInput) {
+    return undefined
+  }
+  if (teammateDefaultModelInput === 'inherit') {
+    return leadModel
+  }
+  return parseUserSpecifiedModel(teammateDefaultModelInput)
 }
 
 export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
@@ -134,7 +185,13 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     }
 
     const { setAppState, getAppState } = context
-    const { team_name, description: _description, agent_type } = input
+    const {
+      team_name,
+      description: _description,
+      agent_type,
+      lead_model,
+      teammate_default_model,
+    } = input
 
     // Check if already in a team - restrict to one team per leader
     const appState = getAppState()
@@ -152,11 +209,18 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     // Generate a deterministic agent ID for the team lead
     const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
     const leadAgentType = agent_type || TEAM_LEAD_NAME
-    // Get the team lead's current model from AppState (handles session model, settings, CLI override)
-    const leadModel = parseUserSpecifiedModel(
+
+    // Resolve team lead's model
+    const currentSessionModel =
       appState.mainLoopModelForSession ??
-        appState.mainLoopModel ??
-        getDefaultMainLoopModel(),
+      appState.mainLoopModel ??
+      getDefaultMainLoopModel()
+    const leadModel = resolveLeadModel(lead_model, currentSessionModel)
+
+    // Resolve teammate default model (team-level config)
+    const teammateDefaultModel = resolveTeammateDefaultModel(
+      teammate_default_model,
+      leadModel,
     )
 
     const teamFilePath = getTeamFilePath(finalTeamName)
@@ -167,6 +231,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       createdAt: Date.now(),
       leadAgentId,
       leadSessionId: getSessionId(), // Store actual session ID for team discovery
+      teammateDefaultModel,
       members: [
         {
           agentId: leadAgentId,

@@ -53,16 +53,34 @@ function getDefaultTeammateModel(leaderModel: string | null): string {
  * have access". If leader model is null (not yet set), falls through to the
  * default.
  *
+ * Priority chain:
+ * 1. inputModel (user specified) - highest priority
+ * 2. teamDefaultModel (team-level config from TeamFile.teammateDefaultModel)
+ * 3. global config (getGlobalConfig().teammateDefaultModel)
+ * 4. hardcoded fallback (Opus 4.6)
+ *
  * Exported for testing.
  */
 export function resolveTeammateModel(
   inputModel: string | undefined,
   leaderModel: string | null,
+  teamDefaultModel?: string | undefined,
 ): string {
-  if (inputModel === 'inherit') {
-    return leaderModel ?? getDefaultTeammateModel(leaderModel)
+  // Priority 1: user specified model (handles 'inherit' alias)
+  if (inputModel) {
+    if (inputModel === 'inherit') {
+      return leaderModel ?? getDefaultTeammateModel(leaderModel)
+    }
+    return inputModel
   }
-  return inputModel ?? getDefaultTeammateModel(leaderModel)
+
+  // Priority 2: team-level default model
+  if (teamDefaultModel) {
+    return teamDefaultModel
+  }
+
+  // Priority 3 & 4: global config or hardcoded fallback
+  return getDefaultTeammateModel(leaderModel)
 }
 
 // ============================================================================
@@ -193,7 +211,11 @@ async function resolveSpawn(
   const uniqueName = await generateUniqueTeammateName(input.name, teamName)
   const sanitizedName = sanitizeAgentName(uniqueName)
   const teammateId = formatAgentId(sanitizedName, teamName)
-  const model = resolveTeammateModel(input.model, appState.mainLoopModel)
+  const model = resolveTeammateModel(
+    input.model,
+    appState.mainLoopModel,
+    teamFile.teammateDefaultModel,
+  )
   const teammateColor = assignTeammateColor(teammateId)
   const workingDir = input.cwd || getCwd()
 

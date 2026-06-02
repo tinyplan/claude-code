@@ -69,6 +69,7 @@ export type TeamFile = {
   leadSessionId?: string // Actual session UUID of the leader (for discovery)
   hiddenPaneIds?: string[] // Pane IDs that are currently hidden from the UI
   teamAllowedPaths?: TeamAllowedPath[] // Paths all teammates can edit without asking
+  teammateDefaultModel?: string // Default model for teammates (team-level config)
   members: Array<{
     agentId: string
     name: string

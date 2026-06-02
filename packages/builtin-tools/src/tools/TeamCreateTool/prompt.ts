@@ -21,6 +21,30 @@ When spawning teammates via the Agent tool, choose the \`subagent_type\` based o
 
 Always review the agent type descriptions and their available tools listed in the Agent tool prompt before selecting a \`subagent_type\` for a teammate.
 
+## Model Configuration
+
+You can configure models for the team lead and teammates:
+
+- **lead_model**: Specify the model for the team lead. Options: \`opus\`, \`sonnet\`, \`haiku\`, \`inherit\`.
+  - \`inherit\` uses the current session model (default behavior if omitted).
+
+- **teammate_default_model**: Set the default model for teammates spawned in this team.
+  - \`inherit\` uses the team lead's model.
+  - If omitted, uses the global teammate default model configuration.
+  - Individual teammates can override this by specifying their own model when spawned via Agent tool.
+
+Example with model configuration:
+\`\`\`
+{
+  "team_name": "my-project",
+  "description": "Working on feature X",
+  "lead_model": "opus",
+  "teammate_default_model": "sonnet"
+}
+\`\`\`
+
+This creates a team where the lead uses Opus and teammates default to Sonnet (unless overridden).
+
 Create a new team to coordinate multiple agents working on a project. Teams have a 1:1 correspondence with task lists (Team = TaskList).
 
 \`\`\`
