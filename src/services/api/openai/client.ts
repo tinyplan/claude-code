@@ -2,6 +2,13 @@ import OpenAI from 'openai'
 import { openaiAdapter } from 'src/services/providerUsage/adapters/openai.js'
 import { updateProviderBuckets } from 'src/services/providerUsage/store.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
+import {
+  isExtraEndpointsEnabled,
+  loadCurrentEndpoint,
+  getEndpointConfig,
+} from 'src/utils/extraEndpoints.js'
+import { getTeammateContext } from 'src/utils/teammateContext.js'
+import { logForDebugging } from 'src/utils/debug.js'
 
 /**
  * Environment variables:
@@ -43,8 +50,29 @@ export function getOpenAIClient(options?: {
 }): OpenAI {
   if (cachedClient) return cachedClient
 
-  const apiKey = process.env.OPENAI_API_KEY || ''
-  const baseURL = process.env.OPENAI_BASE_URL
+  // Priority: teammateContext.endpoint > extra_endpoints > process.env
+  let apiKey = process.env.OPENAI_API_KEY || ''
+  let baseURL = process.env.OPENAI_BASE_URL
+
+  // Check teammate endpoint first (for in-process teammates)
+  const teammateContext = getTeammateContext()
+  if (teammateContext?.endpoint) {
+    const endpointConfig = getEndpointConfig(teammateContext.endpoint)
+    if (endpointConfig && endpointConfig.protocol === 'openai') {
+      apiKey = endpointConfig.apiKey
+      baseURL = endpointConfig.baseUrl
+    } else if (endpointConfig) {
+      logForDebugging(
+        `[extra-endpoints] Endpoint "${teammateContext.endpoint}" has protocol "${endpointConfig.protocol}" — incompatible with OpenAI client, skipping`,
+      )
+    }
+  } else if (isExtraEndpointsEnabled()) {
+    const endpoint = loadCurrentEndpoint()
+    if (endpoint && endpoint.protocol === 'openai') {
+      apiKey = endpoint.apiKey
+      baseURL = endpoint.baseUrl
+    }
+  }
 
   const baseFetch = options?.fetchOverride ?? (globalThis.fetch as typeof fetch)
   const wrappedFetch = wrapFetchForUsage(baseFetch)

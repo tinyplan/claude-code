@@ -474,3 +474,185 @@ describe('gemini settings', () => {
     expect(result.success).toBe(true)
   })
 })
+
+// ─── Extra Endpoints Schema ───────────────────────────────────────────────
+
+describe('extra_endpoints', () => {
+  test('accepts valid extra_endpoints configuration', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com/v1',
+          apiKey: 'sk-test',
+          protocol: 'openai',
+        },
+      },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test('accepts endpoint without protocol (defaults to openai)', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        custom: {
+          baseUrl: 'https://api.custom.com',
+          apiKey: 'key',
+        },
+      },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test('accepts anthropic protocol', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        anthropic_proxy: {
+          baseUrl: 'https://proxy.example.com',
+          apiKey: 'sk-ant',
+          protocol: 'anthropic',
+        },
+      },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test('rejects invalid protocol value', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        invalid: {
+          baseUrl: 'https://api.example.com',
+          apiKey: 'key',
+          protocol: 'invalid',
+        },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test('accepts initial_endpoint', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        deepseek: { baseUrl: 'https://api.deepseek.com', apiKey: 'key' },
+      },
+      initial_endpoint: 'deepseek',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  test('accepts current_endpoint', () => {
+    const result = SettingsSchema().safeParse({
+      extra_endpoints: {
+        deepseek: { baseUrl: 'https://api.deepseek.com', apiKey: 'key' },
+      },
+      current_endpoint: 'deepseek',
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
+// ─── ValidateExtraEndpointsScope ───────────────────────────────────────────
+
+import { validateExtraEndpointsScope } from '../validation'
+
+describe('validateExtraEndpointsScope', () => {
+  test('returns empty array for null settings', () => {
+    expect(validateExtraEndpointsScope(null, 'userSettings')).toEqual([])
+  })
+
+  test('returns empty array for undefined settings', () => {
+    expect(validateExtraEndpointsScope(undefined, 'userSettings')).toEqual([])
+  })
+
+  test('returns empty array for non-object settings', () => {
+    expect(
+      validateExtraEndpointsScope('string' as any, 'userSettings'),
+    ).toEqual([])
+  })
+
+  test('returns empty array when extra_endpoints not present', () => {
+    expect(
+      validateExtraEndpointsScope({ model: 'sonnet' }, 'projectSettings'),
+    ).toEqual([])
+  })
+
+  test('returns empty array when extra_endpoints in userSettings', () => {
+    const settings = {
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com',
+          apiKey: 'key',
+          protocol: 'openai',
+        },
+      },
+    } as any
+    expect(validateExtraEndpointsScope(settings, 'userSettings')).toEqual([])
+  })
+
+  test('returns error when extra_endpoints in projectSettings', () => {
+    const settings = {
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com',
+          apiKey: 'key',
+          protocol: 'openai',
+        },
+      },
+    } as any
+    const errors = validateExtraEndpointsScope(settings, 'projectSettings')
+    expect(errors.length).toBe(1)
+    expect(errors[0]!.path).toBe('extra_endpoints')
+    expect(errors[0]!.message).toContain('only allowed in userSettings')
+    expect(errors[0]!.suggestion).toContain('~/.claude/settings.json')
+  })
+
+  test('returns error when extra_endpoints in localSettings', () => {
+    const settings = {
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com',
+          apiKey: 'key',
+          protocol: 'openai',
+        },
+      },
+    } as any
+    const errors = validateExtraEndpointsScope(settings, 'localSettings')
+    expect(errors.length).toBe(1)
+    expect(errors[0]!.message).toContain('sensitive API keys')
+  })
+
+  test('returns error when extra_endpoints in flagSettings', () => {
+    const settings = {
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com',
+          apiKey: 'key',
+          protocol: 'openai',
+        },
+      },
+    } as any
+    const errors = validateExtraEndpointsScope(settings, 'flagSettings')
+    expect(errors.length).toBe(1)
+  })
+
+  test('returns error when extra_endpoints in policySettings', () => {
+    const settings = {
+      extra_endpoints: {
+        deepseek: {
+          baseUrl: 'https://api.deepseek.com',
+          apiKey: 'key',
+          protocol: 'openai',
+        },
+      },
+    } as any
+    const errors = validateExtraEndpointsScope(settings, 'policySettings')
+    expect(errors.length).toBe(1)
+  })
+
+  test('returns error for empty extra_endpoints object in non-userSettings', () => {
+    // Empty object is truthy, so it's considered "present" and triggers scope validation
+    const settings = { extra_endpoints: {} } as any
+    const errors = validateExtraEndpointsScope(settings, 'projectSettings')
+    expect(errors.length).toBe(1)
+    expect(errors[0]!.path).toBe('extra_endpoints')
+  })
+})

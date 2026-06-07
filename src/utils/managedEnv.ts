@@ -13,6 +13,10 @@ import {
   getSettings_DEPRECATED,
   getSettingsForSource,
 } from './settings/settings.js'
+import {
+  isExtraEndpointsEnabled,
+  getEndpointEnvVarNames,
+} from './extraEndpoints.js'
 
 /**
  * `claude ssh` remote: ANTHROPIC_UNIX_SOCKET routes auth through a -R forwarded
@@ -80,13 +84,35 @@ function withoutCcdSpawnEnvKeys(
 }
 
 /**
+ * When extra endpoints is enabled, strip endpoint-related env vars from
+ * settings-sourced env so the endpoint configuration takes priority.
+ * Uses getEndpointEnvVarNames() from extraEndpoints.ts for the list of vars.
+ */
+function withoutExtraEndpointsVars(
+  env: Record<string, string> | undefined,
+): Record<string, string> {
+  if (!env) return {}
+  if (!isExtraEndpointsEnabled()) return env
+  const endpointEnvVars = getEndpointEnvVarNames()
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (!endpointEnvVars.has(key)) {
+      out[key] = value
+    }
+  }
+  return out
+}
+
+/**
  * Compose the strip filters applied to every settings-sourced env object.
  */
 function filterSettingsEnv(
   env: Record<string, string> | undefined,
 ): Record<string, string> {
-  return withoutCcdSpawnEnvKeys(
-    withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+  return withoutExtraEndpointsVars(
+    withoutCcdSpawnEnvKeys(
+      withoutHostManagedProviderVars(withoutSSHTunnelVars(env)),
+    ),
   )
 }
 

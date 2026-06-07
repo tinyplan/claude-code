@@ -145,6 +145,12 @@ const baseInputSchema = lazySchema(() =>
       .describe(
         "Optional model override for this agent. Takes precedence over the agent definition's model frontmatter. If omitted, uses the agent definition's model, or inherits from the parent.",
       ),
+    endpoint: z
+      .string()
+      .optional()
+      .describe(
+        'Optional endpoint override for this teammate. References an endpoint name from extra_endpoints config in settings.json. If omitted, inherits from the team or global config.',
+      ),
     run_in_background: z
       .boolean()
       .optional()

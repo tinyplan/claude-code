@@ -10,6 +10,11 @@ import {
   AuthenticationError,
 } from '@anthropic-ai/sdk'
 import { getModelStrings } from './modelStrings.js'
+import {
+  isExtraEndpointsEnabled,
+  loadCurrentEndpoint,
+  validateModelAvailability,
+} from '../extraEndpoints.js'
 
 // Cache valid models to avoid repeated API calls
 const validModelCache = new Map<string, boolean>()
@@ -51,7 +56,33 @@ export async function validateModel(
     return { valid: true }
   }
 
-  // Try to make an actual API call with minimal parameters
+  // For OpenAI-compatible endpoints (extra_endpoints or openai provider),
+  // use the /v1/models API instead of sideQuery (which uses Anthropic client)
+  const endpoint = loadCurrentEndpoint()
+  if (endpoint && endpoint.protocol === 'openai') {
+    const result = await validateModelAvailability(endpoint, normalizedModel)
+    if (result.validated) {
+      if (result.available) {
+        validModelCache.set(normalizedModel, true)
+        return { valid: true }
+      }
+      // Model not available on endpoint
+      const modelsList = result.availableModels?.slice(0, 5).join(', ') || ''
+      const more =
+        result.availableModels && result.availableModels.length > 5
+          ? ` (and ${result.availableModels.length - 5} more)`
+          : ''
+      return {
+        valid: false,
+        error: `Model '${normalizedModel}' not available on current endpoint. Available models: ${modelsList}${more}`,
+      }
+    }
+    // Could not validate via API - fall through to sideQuery
+    // (this happens if /v1/models API call failed)
+  }
+
+  // For Anthropic endpoints or when endpoint validation failed,
+  // try to make an actual API call with minimal parameters
   try {
     await sideQuery({
       model: normalizedModel,

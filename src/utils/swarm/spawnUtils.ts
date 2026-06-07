@@ -111,6 +111,13 @@ const TEAMMATE_ENV_VARS = [
   'CLAUDE_CODE_USE_FOUNDRY',
   // Custom API endpoint
   'ANTHROPIC_BASE_URL',
+  // Extra endpoints feature flag and current endpoint
+  'CLAUDE_CODE_EXTRA_ENDPOINTS',
+  // OpenAI endpoint env vars (for extra_endpoints with openai protocol)
+  'OPENAI_API_KEY',
+  'OPENAI_BASE_URL',
+  // Anthropic endpoint env vars (for extra_endpoints with anthropic protocol)
+  'ANTHROPIC_API_KEY',
   // Config directory override
   'CLAUDE_CONFIG_DIR',
   // CCR marker — teammates need this for CCR-aware code paths. Auth finds

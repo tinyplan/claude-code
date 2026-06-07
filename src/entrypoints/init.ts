@@ -41,6 +41,11 @@ import {
   applyConfigEnvironmentVariables,
   applySafeConfigEnvironmentVariables,
 } from '../utils/managedEnv.js'
+import {
+  isExtraEndpointsEnabled,
+  loadCurrentEndpoint,
+  applyEndpointToEnv,
+} from '../utils/extraEndpoints.js'
 import { configureGlobalMTLS } from '../utils/mtls.js'
 import {
   ensureScratchpadDir,
@@ -296,6 +301,11 @@ export function initializeTelemetryAfterTrust(): void {
         )
         // Re-apply env vars to pick up remote settings before initializing telemetry.
         applyConfigEnvironmentVariables()
+        // Initialize extra endpoints if enabled
+        if (isExtraEndpointsEnabled()) {
+          loadCurrentEndpoint()
+          applyEndpointToEnv()
+        }
         await doInitializeTelemetry()
       })
       .catch(error => {

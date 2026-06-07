@@ -7,6 +7,7 @@ import { generateSettingsJSONSchema } from './schemaOutput.js'
 import type { SettingsJson } from './types.js'
 import { SettingsSchema } from './types.js'
 import { getValidationTip } from './validationTips.js'
+import type { SettingSource } from './constants.js'
 
 /**
  * Helper type guards for specific Zod v4 issue types
@@ -264,4 +265,26 @@ export function filterInvalidPermissionRules(
     })
   }
   return warnings
+}
+
+/**
+ * Validate that extra_endpoints is only present in userSettings.
+ * This prevents API keys from being committed to project settings.
+ */
+export function validateExtraEndpointsScope(
+  settings: SettingsJson | null | undefined,
+  source: SettingSource,
+): ValidationError[] {
+  if (!settings || typeof settings !== 'object') return []
+  if (settings.extra_endpoints && source !== 'userSettings') {
+    return [
+      {
+        path: 'extra_endpoints',
+        message:
+          'extra_endpoints only allowed in userSettings (contains sensitive API keys)',
+        suggestion: 'Move extra_endpoints to ~/.claude/settings.json',
+      },
+    ]
+  }
+  return []
 }

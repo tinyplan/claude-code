@@ -2,6 +2,10 @@ import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 
 import { getInitialSettings } from '../settings/settings.js'
 import type { SettingsJson } from '../settings/types.js'
 import { isEnvTruthy } from '../envUtils.js'
+import {
+  isExtraEndpointsEnabled,
+  loadCurrentEndpoint,
+} from '../extraEndpoints.js'
 
 export type APIProvider =
   | 'firstParty'
@@ -27,6 +31,15 @@ export function getAPIProvider(
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_OPENAI)) return 'openai'
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_GEMINI)) return 'gemini'
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_GROK)) return 'grok'
+
+  // Check extra endpoints: if an OpenAI-protocol endpoint is active,
+  // resolve to 'openai' provider instead of falling back to 'firstParty'.
+  if (isExtraEndpointsEnabled()) {
+    const endpoint = loadCurrentEndpoint()
+    if (endpoint && endpoint.protocol === 'openai') {
+      return 'openai'
+    }
+  }
 
   return 'firstParty'
 }

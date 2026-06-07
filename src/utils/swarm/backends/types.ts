@@ -222,6 +222,8 @@ export type TeammateSpawnConfig = TeammateIdentity & {
   cwd: string
   /** Model to use for this teammate */
   model?: string
+  /** Endpoint name from extra_endpoints config */
+  endpoint?: string
   /** Optional custom agent type for process-based teammates. */
   agentType?: string
   /** Optional resolved custom agent definition for in-process teammates. */

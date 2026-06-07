@@ -37,6 +37,8 @@ export type InProcessTeammateTaskState = TaskStateBase & {
   prompt: string
   // Optional model override for this teammate
   model?: string
+  // Optional endpoint override for this teammate (name from extra_endpoints)
+  endpoint?: string
   // Optional: Only set if teammate uses a specific agent definition
   // Many teammates run as general-purpose agents without a predefined definition
   selectedAgent?: AgentDefinition

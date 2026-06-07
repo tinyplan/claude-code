@@ -36,6 +36,8 @@ export type TeammateContext = {
   isInProcess: true
   /** Abort controller for lifecycle management (linked to parent) */
   abortController: AbortController
+  /** Optional endpoint override for this teammate (name from extra_endpoints) */
+  endpoint?: string
 }
 
 const teammateContextStorage = new AsyncLocalStorage<TeammateContext>()
@@ -88,6 +90,7 @@ export function createTeammateContext(config: {
   planModeRequired: boolean
   parentSessionId: string
   abortController: AbortController
+  endpoint?: string
 }): TeammateContext {
   return {
     ...config,

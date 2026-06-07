@@ -92,6 +92,7 @@ export type SpawnOutput = {
   agent_id: string
   agent_type?: string
   model?: string
+  endpoint?: string
   name: string
   color?: string
   tmux_session_name: string
@@ -110,6 +111,7 @@ export type SpawnTeammateConfig = {
   use_splitpane?: boolean
   plan_mode_required?: boolean
   model?: string
+  endpoint?: string
   agent_type?: string
   description?: string
   /** request_id of the API call whose response contained the tool_use that
@@ -127,6 +129,7 @@ type SpawnInput = {
   use_splitpane?: boolean
   plan_mode_required?: boolean
   model?: string
+  endpoint?: string
   agent_type?: string
   description?: string
   invokingRequestId?: string
@@ -180,6 +183,7 @@ type ResolvedSpawn = {
   sanitizedName: string
   teammateId: string
   model: string
+  endpoint?: string
   teammateColor: ReturnType<typeof assignTeammateColor>
   workingDir: string
   agentDefinition?: CustomAgentDefinition
@@ -216,6 +220,8 @@ async function resolveSpawn(
     appState.mainLoopModel,
     teamFile.teammateDefaultModel,
   )
+  // Resolve endpoint: user specified > team default
+  const endpoint = input.endpoint ?? teamFile.teammateDefaultEndpoint
   const teammateColor = assignTeammateColor(teammateId)
   const workingDir = input.cwd || getCwd()
 
@@ -238,6 +244,7 @@ async function resolveSpawn(
     sanitizedName,
     teammateId,
     model,
+    endpoint,
     teammateColor,
     workingDir,
     agentDefinition,
@@ -343,6 +350,7 @@ async function appendTeamMember(
     name: spawn.sanitizedName,
     agentType: input.agent_type,
     model: spawn.model,
+    endpoint: spawn.endpoint,
     prompt: input.prompt,
     color: spawn.teammateColor,
     planModeRequired: input.plan_mode_required,
@@ -386,6 +394,7 @@ async function handleSpawn(
     prompt: input.prompt,
     cwd: spawn.workingDir,
     model: spawn.model,
+    endpoint: spawn.endpoint,
     agentType: input.agent_type,
     agentDefinition: spawn.agentDefinition,
     description: input.description,
@@ -409,6 +418,7 @@ async function handleSpawn(
       agent_id: spawn.teammateId,
       agent_type: input.agent_type,
       model: spawn.model,
+      endpoint: spawn.endpoint,
       name: spawn.sanitizedName,
       color: spawn.teammateColor,
       tmux_session_name: display.sessionName,

@@ -27,10 +27,24 @@ import { type HookCommand, HooksSchema } from '../../schemas/hooks.js'
 import { count } from '../array.js'
 
 /**
- * Schema for environment variables
+ * Schema for environment variables.
+ * Values are converted to strings:
+ * - Strings: kept as-is
+ * - Objects/arrays: converted to JSON string
+ * - Other types: coerced to string
  */
 export const EnvironmentVariablesSchema = lazySchema(() =>
-  z.record(z.string(), z.coerce.string()),
+  z.record(
+    z.string(),
+    z.preprocess(val => {
+      if (typeof val === 'string') return val
+      if (val !== null && typeof val === 'object') {
+        return JSON.stringify(val)
+      }
+      // For other types (number, boolean, null), coerce to string
+      return String(val)
+    }, z.string()),
+  ),
 )
 
 /**
@@ -371,6 +385,40 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'API provider type. "anthropic" uses the Anthropic API (default), "openai" uses the OpenAI Chat Completions API, "gemini" uses the Gemini API, and "grok" uses the xAI Grok API (OpenAI-compatible). ' +
             'When set to "openai", configure OPENAI_API_KEY, OPENAI_BASE_URL, and OPENAI_MODEL. When set to "gemini", configure GEMINI_API_KEY and optional GEMINI_BASE_URL. When set to "grok", configure GROK_API_KEY (or XAI_API_KEY), optional GROK_BASE_URL, GROK_MODEL, and GROK_MODEL_MAP.',
+        ),
+      // Extra endpoints configuration for dynamic provider switching
+      extra_endpoints: z
+        .record(
+          z.string(),
+          z.object({
+            baseUrl: z.string().describe('API base URL'),
+            apiKey: z.string().describe('API key'),
+            protocol: z
+              .enum(['openai', 'anthropic'])
+              .optional()
+              .default('openai')
+              .describe('Protocol type: openai or anthropic'),
+          }),
+        )
+        .optional()
+        .describe(
+          'Extra API endpoints configuration for dynamic provider switching. ' +
+            'Only allowed in userSettings (contains sensitive API keys). ' +
+            'Enable via CLAUDE_CODE_EXTRA_ENDPOINTS=1 environment variable. ' +
+            'When enabled, at least one endpoint must be configured. ' +
+            'The first endpoint is used as default if initial_endpoint is not specified.',
+        ),
+      initial_endpoint: z
+        .string()
+        .optional()
+        .describe(
+          'Name of the initial endpoint to use on startup. If omitted, falls back to current_endpoint, then the first endpoint in extra_endpoints.',
+        ),
+      current_endpoint: z
+        .string()
+        .optional()
+        .describe(
+          'Currently active endpoint name. Updated by /endpoint switch. Used as fallback if initial_endpoint is not specified.',
         ),
       model: z
         .string()

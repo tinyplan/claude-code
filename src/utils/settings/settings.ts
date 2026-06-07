@@ -50,6 +50,7 @@ import {
   formatZodError,
   type SettingsWithErrors,
   type ValidationError,
+  validateExtraEndpointsScope,
 } from './validation.js'
 
 /**
@@ -348,6 +349,16 @@ function getSettingsForSourceUncached(
   const { settings: fileSettings } = settingsFilePath
     ? parseSettingsFile(settingsFilePath)
     : { settings: null }
+
+  // Validate extra_endpoints scope (only allowed in userSettings)
+  const scopeErrors = validateExtraEndpointsScope(fileSettings, source)
+  if (scopeErrors.length > 0) {
+    logError(new Error(`Settings validation error: ${scopeErrors[0].message}`))
+    // Remove extra_endpoints if present in non-userSettings
+    if (fileSettings && fileSettings.extra_endpoints) {
+      delete fileSettings.extra_endpoints
+    }
+  }
 
   // For flagSettings, merge in any inline settings set via the SDK
   if (source === 'flagSettings') {

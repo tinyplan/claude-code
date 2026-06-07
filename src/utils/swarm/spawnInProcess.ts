@@ -70,6 +70,8 @@ export type InProcessSpawnConfig = {
   planModeRequired: boolean
   /** Optional model override for this teammate */
   model?: string
+  /** Optional endpoint override for this teammate */
+  endpoint?: string
 }
 
 /**
@@ -106,7 +108,8 @@ export async function spawnInProcessTeammate(
   config: InProcessSpawnConfig,
   context: SpawnContext,
 ): Promise<InProcessSpawnOutput> {
-  const { name, teamName, prompt, color, planModeRequired, model } = config
+  const { name, teamName, prompt, color, planModeRequired, model, endpoint } =
+    config
   const { setAppState } = context
 
   // Generate deterministic agent ID
@@ -167,6 +170,7 @@ export async function spawnInProcessTeammate(
       identity,
       prompt,
       model,
+      endpoint,
       abortController,
       awaitingPlanApproval: false,
       spinnerVerb: sample(getSpinnerVerbs()),

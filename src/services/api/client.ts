@@ -28,6 +28,12 @@ import {
   getVertexRegionForModel,
   isEnvTruthy,
 } from '../../utils/envUtils.js'
+import {
+  isExtraEndpointsEnabled,
+  loadCurrentEndpoint,
+  getEndpointConfig,
+} from '../../utils/extraEndpoints.js'
+import { getTeammateContext } from '../../utils/teammateContext.js'
 
 /**
  * Environment variables for different client types:
@@ -298,16 +304,44 @@ export async function getAnthropicClient({
   }
 
   // Determine authentication method based on available tokens
+  // Priority: teammateContext.endpoint > extra_endpoints > apiKey param > OAuth > ANTHROPIC_API_KEY
+  let resolvedApiKey: string | null | undefined = apiKey
+  let resolvedBaseUrl: string | undefined
+
+  // Check teammate endpoint first (for in-process teammates)
+  const teammateContext = getTeammateContext()
+  if (teammateContext?.endpoint) {
+    const endpointConfig = getEndpointConfig(teammateContext.endpoint)
+    if (endpointConfig && endpointConfig.protocol === 'anthropic') {
+      resolvedApiKey = endpointConfig.apiKey
+      resolvedBaseUrl = endpointConfig.baseUrl
+    } else if (endpointConfig) {
+      logForDebugging(
+        `[extra-endpoints] Endpoint "${teammateContext.endpoint}" has protocol "${endpointConfig.protocol}" — incompatible with Anthropic client, skipping`,
+      )
+    }
+  } else if (isExtraEndpointsEnabled()) {
+    const endpoint = loadCurrentEndpoint()
+    if (endpoint && endpoint.protocol === 'anthropic') {
+      resolvedApiKey = endpoint.apiKey
+      resolvedBaseUrl = endpoint.baseUrl
+    }
+  }
+
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
+    apiKey: isClaudeAISubscriber()
+      ? null
+      : resolvedApiKey || getAnthropicApiKey(),
     authToken: isClaudeAISubscriber()
       ? getClaudeAIOAuthTokens()?.accessToken
       : undefined,
-    // Set baseURL from OAuth config when using staging OAuth
-    ...(process.env.USER_TYPE === 'ant' &&
-    isEnvTruthy(process.env.USE_STAGING_OAUTH)
-      ? { baseURL: getOauthConfig().BASE_API_URL }
-      : {}),
+    // Set baseURL from extra_endpoints or OAuth config
+    ...(resolvedBaseUrl
+      ? { baseURL: resolvedBaseUrl }
+      : process.env.USER_TYPE === 'ant' &&
+          isEnvTruthy(process.env.USE_STAGING_OAUTH)
+        ? { baseURL: getOauthConfig().BASE_API_URL }
+        : {}),
     ...ARGS,
     ...(isDebugToStdErr() && { logger: createStderrLogger() }),
   }
@@ -351,6 +385,14 @@ function getCustomHeaders(): Record<string, string> {
   }
 
   return customHeaders
+}
+
+/**
+ * Clear Anthropic client cache — no-op (no caching currently),
+ * but exported for symmetry with clearOpenAIClientCache().
+ */
+export function clearAnthropicClientCache(): void {
+  // No-op: Anthropic client creates fresh instances per call
 }
 
 export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'

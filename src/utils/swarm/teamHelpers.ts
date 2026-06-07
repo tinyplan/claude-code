@@ -70,11 +70,13 @@ export type TeamFile = {
   hiddenPaneIds?: string[] // Pane IDs that are currently hidden from the UI
   teamAllowedPaths?: TeamAllowedPath[] // Paths all teammates can edit without asking
   teammateDefaultModel?: string // Default model for teammates (team-level config)
+  teammateDefaultEndpoint?: string // Default endpoint for teammates (team-level config)
   members: Array<{
     agentId: string
     name: string
     agentType?: string
     model?: string
+    endpoint?: string // Endpoint name from extra_endpoints config
     prompt?: string
     color?: string
     planModeRequired?: boolean
